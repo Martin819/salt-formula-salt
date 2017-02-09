@@ -1,4 +1,6 @@
 {%- from "salt/map.jinja" import minion with context %}
+
+{%- if pillar.salt.minion.cert is defined %}
 {%- if minion.enabled %}
 
 {%- for cert_name,cert in minion.get('cert', {}).iteritems() %}
@@ -121,3 +123,19 @@ salt_minion_cert_{{ cert_name }}_all:
 {%- endfor %}
 
 {%- endif %}
+{%- endif %}
+
+{%- if minion.get('cert', {}).get('trust_salt_ca', 'True') %}
+{%- for ca_host, certs in salt['mine.get']('*', 'x509.get_pem_entries').iteritems() %}
+{%- for ca_path, ca_cert in certs.iteritems() %}
+  file.managed:
+  - content: ca_cert
+  - watch_in:
+    - cmd: update_certificates
+  - require:
+    - pkg: linux_system_ca_certificates
+{%- endfor %}
+{%- endfor %}
+
+{%- endif %}
+
